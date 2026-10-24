@@ -78,6 +78,46 @@ The app hosted at [excalidraw.com](https://excalidraw.com) is a minimal showcase
 - 💾&nbsp;Local-first support (autosaves to the browser).
 - 🔗&nbsp;Shareable links (export to a readonly link you can share with others).
 
+## Self-Hosted Deployment
+
+To deploy Excalidraw with your own storage backend (recommended for production):
+
+### Docker Build
+
+```bash
+docker build --no-cache -t excalidraw:latest /path/to/excalidraw
+```
+
+### Environment Configuration
+
+Create an `env.json` file with your backend URLs:
+
+```json
+{
+  "VITE_APP_WS_SERVER_URL": "http://your-room-server:80",
+  "VITE_APP_STORAGE_BACKEND": "http",
+  "VITE_APP_HTTP_STORAGE_BACKEND_URL": "http://your-storage-backend:8080/api/v2",
+  "VITE_APP_BACKEND_V2_GET_URL": "http://your-storage-backend:8080/api/v2/scenes",
+  "VITE_APP_BACKEND_V2_POST_URL": "http://your-storage-backend:8080/api/v2/scenes"
+}
+```
+
+`/env.json` is loaded at runtime and overrides build-time `VITE_APP_*` values. The image ships an empty `{}` default, so mount your file as shown below.
+
+### Docker Run
+
+```bash
+docker run -d -p 8080:80 \
+  -v ./env.json:/usr/share/nginx/html/env.json:ro \
+  excalidraw:latest
+```
+
+Required infrastructure:
+
+- **excalidraw-room** - WebSocket server for live collaboration
+- **excalidraw-storage-backend** - HTTP API for scene/file storage
+- **Redis** - Storage backend database
+
 We'll be adding these features as drop-in plugins for the npm package in the future.
 
 ## Quick start

@@ -36,6 +36,7 @@ import {
 } from "../app_constants";
 
 import { encodeFilesForUpload } from "./FileManager";
+import { getRuntimeEnv } from "./env";
 import { saveFilesToFirebase } from "./firebase";
 
 import type { WS_SUBTYPES } from "../app_constants";
@@ -62,8 +63,24 @@ export const getSyncableElements = (
     isSyncableElement(element),
   ) as SyncableExcalidrawElement[];
 
-const BACKEND_V2_GET = import.meta.env.VITE_APP_BACKEND_V2_GET_URL;
-const BACKEND_V2_POST = import.meta.env.VITE_APP_BACKEND_V2_POST_URL;
+// join a base URL and a path with exactly one slash between them, tolerating
+// configs that do (upstream default) or do not (self-hosted backend) end with "/"
+const joinUrl = (base: string, path: string) =>
+  `${base.replace(/\/+$/, "")}/${path.replace(/^\/+/, "")}`;
+
+const getBackendV2Urls = async () => {
+  const env = await getRuntimeEnv();
+  return {
+    get:
+      env.VITE_APP_BACKEND_V2_GET_URL ||
+      import.meta.env.VITE_APP_BACKEND_V2_GET_URL ||
+      "",
+    post:
+      env.VITE_APP_BACKEND_V2_POST_URL ||
+      import.meta.env.VITE_APP_BACKEND_V2_POST_URL ||
+      "",
+  };
+};
 
 const generateRoomId = async () => {
   const buffer = new Uint8Array(ROOM_ID_BYTES);
@@ -204,7 +221,7 @@ export const importFromBackend = async (
   decryptionKey: string,
 ): Promise<ImportedDataState> => {
   try {
-    const response = await fetch(`${BACKEND_V2_GET}${id}`);
+    const response = await fetch(joinUrl((await getBackendV2Urls()).get, id));
 
     if (!response.ok) {
       window.alert(t("alerts.importBackendFailed"));
@@ -273,7 +290,7 @@ export const exportToBackend = async (
       maxBytes: FILE_UPLOAD_MAX_BYTES,
     });
 
-    const response = await fetch(BACKEND_V2_POST, {
+    const response = await fetch(joinUrl((await getBackendV2Urls()).post, ""), {
       method: "POST",
       body: payload.buffer,
     });

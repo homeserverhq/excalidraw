@@ -89,7 +89,7 @@ type FirebaseStoredScene = {
   ciphertext: Bytes;
 };
 
-const encryptElements = async (
+export const encryptElements = async (
   key: string,
   elements: readonly ExcalidrawElement[],
 ): Promise<{ ciphertext: ArrayBuffer; iv: Uint8Array }> => {
@@ -100,13 +100,21 @@ const encryptElements = async (
   return { ciphertext: encryptedBuffer, iv };
 };
 
-const decryptElements = async (
+export const decryptElements = async (
   data: FirebaseStoredScene,
   roomKey: string,
-): Promise<readonly ExcalidrawElement[]> => {
+): Promise<readonly OrderedExcalidrawElement[]> => {
   const ciphertext = data.ciphertext.toUint8Array() as Uint8Array<ArrayBuffer>;
   const iv = data.iv.toUint8Array() as Uint8Array<ArrayBuffer>;
 
+  return decryptElementsFromBuffer(iv, ciphertext, roomKey);
+};
+
+export const decryptElementsFromBuffer = async (
+  iv: Uint8Array<ArrayBuffer>,
+  ciphertext: Uint8Array<ArrayBuffer>,
+  roomKey: string,
+): Promise<readonly OrderedExcalidrawElement[]> => {
   const decrypted = await decryptData(iv, ciphertext, roomKey);
   const decodedData = new TextDecoder("utf-8").decode(
     new Uint8Array(decrypted),
