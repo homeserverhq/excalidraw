@@ -368,6 +368,14 @@ class Collab extends PureComponent<CollabProps, CollabState> {
     syncableElements: readonly SyncableExcalidrawElement[],
   ) => {
     syncableElements = cloneJSON(syncableElements);
+
+    // Upload any image files present in the scene alongside the scene itself.
+    // File uploads used to be triggered only from live broadcasts, so images
+    // that existed before a room was created were never persisted.
+    if (this.isCollaborating()) {
+      this.portal.queueFileUpload();
+    }
+
     try {
       let storedElements: readonly RemoteExcalidrawElement[] | null = null;
       if (getStorageBackendType() === StorageBackendType.HTTP) {

@@ -157,27 +157,38 @@ export const saveFilesToHttpStorage = async ({
 }) => {
   const HTTP_STORAGE_BACKEND_URL = getStorageUrl();
 
-  if (!HTTP_STORAGE_BACKEND_URL) {
-    return {
-      savedFiles: new Map<FileId, true>(),
-      erroredFiles: new Map<FileId, true>(),
-    };
-  }
-
   const erroredFiles = new Map<FileId, true>();
   const savedFiles = new Map<FileId, true>();
+
+  if (!HTTP_STORAGE_BACKEND_URL) {
+    for (const { id } of files) {
+      erroredFiles.set(id, true);
+    }
+    return { savedFiles, erroredFiles };
+  }
 
   await Promise.all(
     files.map(async ({ id, buffer }) => {
       try {
-        const payloadBlob = new Blob([buffer.buffer as ArrayBuffer]);
-        const payload = await new Response(payloadBlob).arrayBuffer();
-        await fetch(`${HTTP_STORAGE_BACKEND_URL}/files/${id}`, {
-          method: "PUT",
-          body: payload,
-        });
+        // Send exactly the bytes of the view (not the whole backing buffer).
+        const payload = buffer.buffer.slice(
+          buffer.byteOffset,
+          buffer.byteOffset + buffer.byteLength,
+        ) as ArrayBuffer;
+        const response = await fetch(
+          `${HTTP_STORAGE_BACKEND_URL}/files/${id}`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/octet-stream" },
+            body: payload,
+          },
+        );
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
         savedFiles.set(id, true);
       } catch (error: any) {
+        console.error(`Failed to save file ${id}`, error);
         erroredFiles.set(id, true);
       }
     }),

@@ -205,7 +205,7 @@ export class FileManager {
     return (
       isInitializedImageElement(element) &&
       this.savedFiles.has(element.fileId) &&
-      element.status === "pending"
+      (element.status === "pending" || element.status === "error")
     );
   };
 
